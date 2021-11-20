@@ -1,6 +1,3 @@
-const mineflayer = require("mineflayer");
-const {CommandHandler} = require("./CommandSystem/commandModule");
-
 let config;
 try {
     config = require("./config.json");
@@ -11,25 +8,46 @@ try {
         throw ex;
 }
 
-const bot = mineflayer.createBot({
+const mineflayer = require("mineflayer");
+let botOptions = {
     host: "mc.hypixel.net",
     username: config.email,
     password: config.password,
-    auth: config.auth
-});
+    auth: config.auth,
+    viewDistance: "tiny",
+    colorsEnabled: false,
+};
+const {CommandHandler} = require("./CommandSystem/commandModule");
 
-bot.on("messagestr", (message, position, jsonMsg) => {
-    console.log(`MESSAGE: ${message}`);
-});
+let bot = mineflayer.createBot(botOptions);
+bindBotEvents(bot);
 
-// Send the bot to Limbo
-bot.once('spawn', () => {
-    bot.chat("/achat \u00a7c");
-});
+function bindBotEvents(bot) {
+    //#region Essential events
+    //Send the bot to Limbo on spawn
+    bot.once("spawn", () => {
+        bot.chat("/achat \u00a7c");
+        console.log(`Bot connected to Hypixel`);
+    });
 
-// Log errors and kick reasons:
-bot.on('kicked', console.log);
-bot.on('error', console.log);
+    // Log errors and kick reasons:
+    bot.on("kicked", console.log);
+    bot.on("error", console.log);
+    //#endregion
+
+    // Relog bot when it was disconnected
+    bot.on("end", () => {
+        console.log("Bot was disconnected from the server. Retrying in 30 seconds!");
+        setTimeout(relog, 30000);
+    });
+
+    function relog() {
+        console.log("Attempting to reconnect...");
+        bot = mineflayer.createBot(botOptions);
+        bindBotEvents(bot);
+    }
+}
 
 const commandHandler = new CommandHandler();
-commandHandler.registerCommands((require("./CommandSystem/botCommands")(bot)))
+commandHandler.registerCommands((require("./CommandSystem/minecraftCommands")(bot)));
+commandHandler.registerCommands((require("./CommandSystem/systemCommands")(bot)));
