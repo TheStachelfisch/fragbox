@@ -1,6 +1,5 @@
 const {Command} = require("./commandModule");
-let bot;
-
+let mineflayerBot;
 const clearConsoleCommand = new Command("clear", "Clears the console", "clear", () => {
     console.clear();
     return true;
@@ -21,7 +20,7 @@ const evalCommand = new Command("eval", "Evaluates code", "eval <code>", args =>
     return true;
 });
 
-module.exports = mineflayerBot => {
-    bot = mineflayerBot;
+module.exports = (bot) => {
+    mineflayerBot = bot;
     return [clearConsoleCommand, evalCommand]
 };

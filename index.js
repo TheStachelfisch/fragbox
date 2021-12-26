@@ -13,27 +13,32 @@ try {
 }
 
 const {Client, Intents} = require('discord.js');
-const client = new Client({intents: [Intents.FLAGS.GUILDS]});
+const client = new Client(
+    {
+        intents: [Intents.FLAGS.DIRECT_MESSAGES, Intents.FLAGS.GUILDS],
+        partials: ["MESSAGE", "CHANNEL"]
+    }
+);
 
 const mineflayer = require("mineflayer");
 let botOptions = {
     host: "mc.hypixel.net",
     username: config.email,
-    password: config.password,
+    // password: config.password,
     auth: config.auth,
     viewDistance: "tiny",
     colorsEnabled: false,
 };
 const {CommandHandler} = require("./CommandSystem/commandModule");
-const commandHandler = new CommandHandler(config);
+const commandHandler = new CommandHandler(config, client);
 
 // Wait for the discord client to start the bot
-client.once("ready",  () => {
-    console.log("Discord client is ready!\nStarting Minecraft bot")
+client.once("ready", () => {
+    console.log("Discord client is ready!\nStarting Minecraft bot");
     let bot = mineflayer.createBot(botOptions);
     bindBotEvents(bot);
-})
-client.login(config.DiscordToken)
+});
+client.login(config.DiscordToken);
 
 
 function bindBotEvents(bot) {
@@ -45,6 +50,7 @@ function bindBotEvents(bot) {
         commandHandler.registerCommands((require("./CommandSystem/systemCommands")(bot)));
 
         bot.chat("/achat \u00a7c");
+        bot.chat("/p leave")
         console.log(`Bot connected to Hypixel`);
     });
 
@@ -60,6 +66,15 @@ function bindBotEvents(bot) {
             setTimeout(relog, 30000);
         } else {
             console.log("Bot was disconnected. \`reconnect\` is set to false, not retrying!");
+        }
+    });
+
+    bot.on("messagestr", message => {
+        if (message.includes("invited you to join their party!") && !message.includes("Guild")) {
+            const username = new RegExp("(\\w{3,16}) has invited you to join their party!").exec(message)[1];
+            if (config.WhiteListedPeople.includes(username)) {
+                bot.chat(`/p accept ${username}`);
+            }
         }
     });
 

@@ -1,15 +1,15 @@
-const consoleReader = require("readline").createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
 class CommandHandler {
-    constructor(config) {
+    constructor(config, discordClient) {
         this.commands = {};
         this.commands[helpCommand.name] = helpCommand;
         this.config = config;
+        this.discordClient = discordClient;
 
-        consoleReader.on("line", input => this.handleCommand(input));
+        discordClient.on(`messageCreate`, async message => {
+            if (message.guild === null && !message.author.bot && config.WhiteListedManagers.includes(message.author.id)) {
+                await this.handleCommand(message);
+            }
+        });
     }
 
     registerCommands(commands) {
@@ -22,17 +22,19 @@ class CommandHandler {
         this.commands[helpCommand.name] = helpCommand;
     }
 
-    async handleCommand(input) {
-        const args = input.trim().split(" ");
+    async handleCommand(message) {
+        const args = message.content.trim().split(" ");
         // At least 1 word and it contains the prefix
         if (args.length >= 1 && (args[0].charAt(0) === this.config.BotPrefix)) {
             const command = this.commands[args[0].toLowerCase().replace(this.config.BotPrefix, "")];
-            if (command)
+            if (command) {
                 // Commands return false when the syntax was wrong
-                if (await command.handler(args.filter((value, index) => index > 0), this) === false)
-                    console.log(`>>> Wrong syntax, use: ${command.usage}.`);
-                else
-                    console.log(`>>> Command not found. View ${helpCommand.name} for a list of commands`);
+                if (await command.handler(args.filter((value, index) => index > 0), this, message) === false) {
+                    message.reply(`Wrong syntax, use: ${command.usage}.`);
+                }
+            } else {
+                message.reply(`Command not found. View ${helpCommand.name} for a list of commands`);
+            }
         }
     }
 }
@@ -46,12 +48,14 @@ class Command {
     }
 }
 
-const helpCommand = new Command("help", "Prints all available commands", "help", (args, handler) => {
+const helpCommand = new Command("help", "Prints all available commands", "help", (args, handler, message) => {
     const commands = handler.commands;
+    let temp = "";
     Object.keys(commands).forEach(key => {
         const command = commands[key];
-        console.log(`>>> ${command.name} : ${command.description} -> ${command.usage}`);
+        temp += `${command.name} : ${command.description} -> ${command.usage}\n`;
     });
+    message.reply(temp);
     return true;
 });
 
